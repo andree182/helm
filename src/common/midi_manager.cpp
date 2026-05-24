@@ -106,11 +106,9 @@ bool MidiManager::isMidiMapped(const std::string& name) const {
 }
 
 void MidiManager::setSampleRate(double sample_rate) {
-  midi_collector_.reset(sample_rate);
 }
 
 void MidiManager::removeNextBlockOfMessages(juce::MidiBuffer& buffer, int num_samples) {
-  midi_collector_.removeNextBlockOfMessages(buffer, num_samples);
 }
 
 void MidiManager::processMidiMessage(const juce::MidiMessage& midi_message, int sample_position) {
@@ -165,10 +163,6 @@ void MidiManager::processMidiMessage(const juce::MidiMessage& midi_message, int 
   }
 }
 
-void MidiManager::handleIncomingMidiMessage(juce::MidiInput *source,
-                                            const juce::MidiMessage &midi_message) {
-  midi_collector_.addMessageToQueue(midi_message);
-}
 
 void MidiManager::replaceKeyboardMessages(juce::MidiBuffer& buffer, int num_samples) {
   keyboard_state_->processNextMidiBuffer(buffer, 0, num_samples, true);

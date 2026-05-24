@@ -17,29 +17,28 @@
 #ifndef SYNTH_GUI_INTERFACE_H
 #define SYNTH_GUI_INTERFACE_H
 
-#include "full_interface.h"
 #include "synth_base.h"
 
 class SynthGuiInterface {
   public:
-    SynthGuiInterface(SynthBase* synth, bool use_gui = true);
+    SynthGuiInterface(SynthBase* synth, bool use_gui = true) : synth_(synth) { }
     virtual ~SynthGuiInterface() { }
 
     virtual juce::AudioDeviceManager* getAudioDeviceManager() { return nullptr; }
 
     SynthBase* getSynth() { return synth_; }
-    virtual void updateFullGui();
-    virtual void updateGuiControl(const std::string& name, mopo::mopo_float value);
-    mopo::mopo_float getControlValue(const std::string& name);
-    void setFocus();
-    void notifyChange();
-    void notifyFresh();
-    void externalPatchLoaded(juce::File patch);
-    void setGuiSize(int width, int height);
+    virtual void updateFullGui() { }
+    virtual void updateGuiControl(const std::string& name, mopo::mopo_float value) { }
+    mopo::mopo_float getControlValue(const std::string& name) { return 0.0; }
+    void setFocus() { }
+    void notifyChange() { }
+    void notifyFresh() { }
+    void externalPatchLoaded(juce::File patch) { }
+    void setGuiSize(int width, int height) { }
 
   protected:
     SynthBase* synth_;
-    juce::ScopedPointer<FullInterface> gui_;
 };
 
 #endif // SYNTH_GUI_INTERFACE_H
+

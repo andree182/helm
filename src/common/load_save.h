@@ -97,6 +97,7 @@ class LoadSave {
     static juce::File getFactoryBankDirectory();
     static juce::File getBankDirectory();
     static juce::File getUserBankDirectory();
+    static void setCustomBankDirectory(juce::File dir);
     static juce::File getDidPayInitiallyFile();
     static void exportBank(juce::String bank_name);
     static void importBank();
@@ -112,6 +113,7 @@ class LoadSave {
 
   private:
     static juce::String configSuffixPrefix;
+    static juce::File custom_bank_directory_;
 };
 
 #endif  // LOAD_SAVE_H

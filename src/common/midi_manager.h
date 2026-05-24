@@ -29,7 +29,7 @@ namespace mopo {
   class HelmEngine;
 } // namespace mopo
 
-class MidiManager : public juce::MidiInputCallback {
+class MidiManager {
   public:
     typedef std::map<std::pair<int, int>, std::map<std::string, const mopo::ValueDetails*>> midi_map;
 
@@ -59,8 +59,7 @@ class MidiManager : public juce::MidiInputCallback {
     midi_map getMidiLearnMap() { return midi_learn_map_; }
     void setMidiLearnMap(midi_map midi_learn_map) { midi_learn_map_ = midi_learn_map; }
 
-    // MidiInputCallback
-    void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &midi_message) override;
+
 
     struct PatchLoadedCallback : public juce::CallbackMessage {
       PatchLoadedCallback(Listener* lis, juce::File pat) : listener(lis), patch(pat) { }
@@ -78,7 +77,6 @@ class MidiManager : public juce::MidiInputCallback {
     SynthBase* synth_;
     mopo::HelmEngine* engine_;
     juce::MidiKeyboardState* keyboard_state_;
-    juce::MidiMessageCollector midi_collector_;
     std::map<std::string, juce::String>* gui_state_;
     Listener* listener_;
     int current_bank_;

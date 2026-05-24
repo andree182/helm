@@ -37,7 +37,8 @@ SynthBase::SynthBase() {
   memory_input_offset_ = 0;
   memory_index_ = 0;
 
-  Startup::doStartupChecks(midi_manager_);
+  // Startup checks disabled in headless mode
+  // Startup::doStartupChecks(midi_manager_);
 }
 
 void SynthBase::valueChanged(const std::string& name, mopo::mopo_float value) {
@@ -189,13 +190,8 @@ bool SynthBase::loadFromFile(juce::File patch) {
 }
 
 bool SynthBase::exportToFile() {
-  juce::File active_file = getActiveFile();
-  juce::FileChooser save_box("Export Patch", juce::File(), juce::String("*.") + mopo::PATCH_EXTENSION);
-  /*if (!save_box.browseForFileToSave(true))
-    return false;*/
-
-  saveToFile(save_box.getResult());
-  return true;
+  // Export disabled in headless mode
+  return false;
 }
 
 bool SynthBase::saveToFile(juce::File patch) {

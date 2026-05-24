@@ -48,6 +48,11 @@ namespace {
 } // namespace
 
 juce::String LoadSave::configSuffixPrefix = "default";
+juce::File LoadSave::custom_bank_directory_ = juce::File();
+
+void LoadSave::setCustomBankDirectory(juce::File dir) {
+  custom_bank_directory_ = dir;
+}
 
 juce::var LoadSave::stateToVar(SynthBase* synth,
                          std::map<std::string, juce::String>& save_info,
@@ -85,15 +90,20 @@ juce::var LoadSave::stateToVar(SynthBase* synth,
 void LoadSave::loadControls(SynthBase* synth,
                             const juce::NamedValueSet& properties) {
   mopo::control_map controls = synth->getControls();
+
   for (auto& control : controls) {
     juce::String name = control.first;
     if (properties.contains(name)) {
       mopo::mopo_float value = properties[name];
       control.second->set(value);
-    }
-    else {
-      mopo::ValueDetails details = mopo::Parameters::getDetails(name.toStdString());
+    } else {
+      if (mopo::Parameters::isParameter(name.toStdString())) {
+        mopo::ValueDetails details =
+            mopo::Parameters::getDetails(name.toStdString());
       control.second->set(details.default_value);
+      } else {
+        control.second->set(0.0f);
+      }
     }
   }
 }
@@ -101,13 +111,22 @@ void LoadSave::loadControls(SynthBase* synth,
 void LoadSave::loadModulations(SynthBase* synth,
                                const juce::Array<juce::var>* modulations) {
   synth->clearModulations();
+  if (modulations == nullptr)
+    return;
+
   const juce::var* modulation = modulations->begin();
 
   for (; modulation != modulations->end(); ++modulation) {
     juce::DynamicObject* mod = modulation->getDynamicObject();
+    if (mod == nullptr)
+      continue;
+
     std::string source = mod->getProperty("source").toString().toStdString();
-    std::string destination = mod->getProperty("destination").toString().toStdString();
-    mopo::ModulationConnection* connection = synth->getModulationBank().get(source, destination);
+    std::string destination =
+        mod->getProperty("destination").toString().toStdString();
+    mopo::ModulationConnection *connection =
+        synth->getModulationBank().get(source, destination);
+    if (connection != nullptr)
     synth->setModulationAmount(connection, mod->getProperty("amount"));
   }
 }
@@ -128,8 +147,12 @@ void LoadSave::initSynth(SynthBase* synth, std::map<std::string, juce::String>& 
 
   mopo::control_map controls = synth->getControls();
   for (auto& control : controls) {
+    if (mopo::Parameters::isParameter(control.first)) {
     mopo::ValueDetails details = mopo::Parameters::getDetails(control.first);
     control.second->set(details.default_value);
+    } else {
+      control.second->set(0.0f);
+    }
   }
 
   save_info["author"] = "";
@@ -144,6 +167,9 @@ void LoadSave::varToState(SynthBase* synth,
     return;
 
   juce::DynamicObject* object_state = state.getDynamicObject();
+  if (object_state == nullptr)
+    return;
+
   juce::NamedValueSet properties = object_state->getProperties();
 
   // Version 0.4.1 was the last build before we saved the version number.
@@ -157,14 +183,21 @@ void LoadSave::varToState(SynthBase* synth,
     new_properties.set("settings", object_state);
     properties = new_properties;
   }
-
   juce::var settings = properties["settings"];
   juce::DynamicObject* settings_object = settings.getDynamicObject();
+  if (settings_object == nullptr)
+    return;
   juce::NamedValueSet settings_properties = settings_object->getProperties();
-  juce::Array<juce::var>* modulations = settings_properties["modulations"].getArray();
 
-  // After 0.5.0 mixer was added and osc_mix was removed. And scaling of oscillators was changed.
+  juce::Array<juce::var> *modulations = nullptr;
+  if (settings_properties.contains("modulations")) {
+    modulations = settings_properties["modulations"].getArray();
+  }
+  // After 0.5.0 mixer was added and osc_mix was removed. And scaling of
+  // oscillators was changed.
   if (compareVersionStrings(version, "0.5.0") <= 0) {
+    if (modulations == nullptr)
+      return;
 
     // Fix control control values.
     if (settings_properties.contains("osc_mix")) {
@@ -731,6 +764,8 @@ std::pair<wchar_t, wchar_t> LoadSave::getComputerKeyboardOctaveControls() {
 }
 
 juce::File LoadSave::getFactoryBankDirectory() {
+  if (custom_bank_directory_.getFullPathName().isNotEmpty())
+    return custom_bank_directory_;
   juce::File patch_dir = juce::File("");
 #ifdef LINUX
   patch_dir = juce::File(LINUX_FACTORY_PATCH_DIRECTORY);
@@ -746,6 +781,8 @@ juce::File LoadSave::getFactoryBankDirectory() {
 }
 
 juce::File LoadSave::getBankDirectory() {
+  if (custom_bank_directory_.getFullPathName().isNotEmpty())
+    return custom_bank_directory_;
   if (!isInstalled())
     return juce::File("../../../patches");
 
@@ -786,31 +823,11 @@ juce::File LoadSave::getDidPayInitiallyFile() {
 }
 
 void LoadSave::exportBank(juce::String bank_name) {
-  juce::File banks_dir = getBankDirectory();
-  juce::File bank = banks_dir.getChildFile(bank_name);
-  juce::Array<juce::File> patches;
-  bank.findChildFiles(patches, juce::File::findFiles, true, juce::String("*.") + mopo::PATCH_EXTENSION);
-  juce::ZipFile::Builder zip_builder;
-
-  for (juce::File patch : patches)
-    zip_builder.addFile(patch, 2, patch.getRelativePathFrom(banks_dir));
-
-  juce::FileChooser save_box("Export Bank As", juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-                       juce::String("*.") + EXPORTED_BANK_EXTENSION);
-  /*if (save_box.browseForFileToSave(true)) {
-    juce::FileOutputStream out_stream(save_box.getResult().withFileExtension(EXPORTED_BANK_EXTENSION));
-    double *progress = nullptr;
-    zip_builder.writeToStream(out_stream, progress);
-  }*/
+  // Disabled in headless mode
 }
 
 void LoadSave::importBank() {
-  juce::FileChooser open_box("Import Bank", juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-                       juce::String("*.") + EXPORTED_BANK_EXTENSION);
-  /*if (open_box.browseForFileToOpen()) {
-    juce::ZipFile zip_file(open_box.getResult());
-    zip_file.uncompressTo(getBankDirectory());
-  }*/
+  // Disabled in headless mode
 }
 
 int LoadSave::compareVersionStrings(juce::String a, juce::String b) {

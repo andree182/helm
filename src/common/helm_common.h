@@ -269,7 +269,22 @@ namespace mopo {
 
       const ValueDetails& getDetails(const std::string& name) const {
         auto details = details_lookup_.find(name);
-        MOPO_ASSERT(details != details_lookup_.end());
+        if (details == details_lookup_.end()) {
+          static const ValueDetails default_details = {
+            "",       // name
+            0.0f,     // min
+            1.0f,     // max
+            0,        // steps
+            0.0f,     // default_value
+            0.0f,     // post_offset
+            1.0f,     // display_multiply
+            ValueDetails::kLinear,  // display_skew
+            false,    // display_invert
+            "",       // display_units
+            ""        // display_name
+          };
+          return default_details;
+        }
         return details->second;
       }
 

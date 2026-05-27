@@ -127,12 +127,11 @@ namespace mopo {
     step_sequencer_->plug(step_frequency, StepGenerator::kFrequency);
 
     for (int i = 0; i < MAX_STEPS; ++i) {
-      std::stringstream stream;
-      stream << i;
-      std::string num = stream.str();
-      if (num.length() == 1)
-        num = "0" + num;
-      Processor* step = createBaseControl(std::string("step_seq_") + num);
+      std::string name = "step_seq_";
+      if (i < 10)
+        name += "0";
+      name += std::to_string(i);
+      Processor* step = createBaseControl(name);
       step_sequencer_->plug(step, StepGenerator::kSteps + i);
     }
 
